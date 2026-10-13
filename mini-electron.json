@@ -1,0 +1,14 @@
+{
+  "name": "Mini Electron Demo",
+  "outputFilename": "mini_electron",
+  "window": {
+    "title": "Mini Electron Demo",
+    "width": 900,
+    "height": 640
+  },
+  "icon": "build/icon.ico",
+  "dataDir": "mini-electron-demo",
+  "cookieDir": "",
+  "userAgent": "",
+  "devUrl": "http://localhost:5173"
+}
