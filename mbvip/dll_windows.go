@@ -129,7 +129,7 @@ func loadDLL(path string) (*dllFacade, error) {
 	facade.mbResize = dll.NewProc("mbResize")
 	facade.mbGetHostHWND = dll.NewProc("mbGetHostHWND")
 	facade.mbLoadURL = dll.NewProc("mbLoadURL")
-	facade.mbGetURL = dll.NewProc("mbGetURL")
+	facade.mbGetURL = dll.NewProc("mbGetUrl")
 	facade.mbLoadHtmlWithBaseUrl = dll.NewProc("mbLoadHtmlWithBaseUrl")
 	facade.mbStopLoading = dll.NewProc("mbStopLoading")
 	facade.mbReload = dll.NewProc("mbReload")

@@ -54,6 +54,26 @@ func (c *Client) HostHWND(view WebView) (uintptr, error) {
 	return hwnd, nil
 }
 
+const swMaximize = 3
+
+// MaximizeWindow 让承载该 view 的原生窗口最大化（含任务栏/工作区处理）。
+func (c *Client) MaximizeWindow(view WebView) error {
+	hwnd, err := c.HostHWND(view)
+	if err != nil {
+		return err
+	}
+	if hwnd == 0 {
+		return syscall.EINVAL
+	}
+	user32 := syscall.NewLazyDLL("user32.dll")
+	showWindow := user32.NewProc("ShowWindow")
+	if err := showWindow.Find(); err != nil {
+		return err
+	}
+	showWindow.Call(hwnd, swMaximize)
+	return nil
+}
+
 func (c *Client) SetWindowTitle(view WebView, title string) error {
 	if err := requireProc(c.dll.mbSetWindowTitle, "mbSetWindowTitle"); err != nil {
 		return err

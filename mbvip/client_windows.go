@@ -14,6 +14,23 @@ func (c *Client) Init() {
 	c.dll.mbInit.Call(0)
 }
 
+func (c *Client) uninit() {
+	defer runtime.UnlockOSThread()
+	p := c.dll.dll.NewProc("mbUninit")
+	if p.Find() == nil {
+		p.Call()
+	}
+}
+
+func (c *Client) exitMessageLoop() {
+	p := c.dll.dll.NewProc("mbExitMessageLoop")
+	if c.dll.mbRunMessageLoop.Find() == nil && p.Find() == nil {
+		p.Call()
+		return
+	}
+	syscall.NewLazyDLL("user32.dll").NewProc("PostQuitMessage").Call(0)
+}
+
 func (c *Client) CreateWebWindow(opts WindowOptions) (WebView, error) {
 	if opts.Width <= 0 || opts.Height <= 0 {
 		return 0, fmt.Errorf("invalid window size: %dx%d", opts.Width, opts.Height)
@@ -51,36 +68,6 @@ func (c *Client) SetNavigationToNewWindowEnable(view WebView, enable bool) error
 		return ProcNotFoundError{Name: "mbSetNavigationToNewWindowEnable"}
 	}
 	c.dll.mbSetNavigationToNewWindowEnable.Call(uintptr(view), boolToUintptr(enable))
-	return nil
-}
-
-func (c *Client) EnableDevTools(view WebView, inspectorURL string) error {
-	key := toCString("showDevTools")
-	param := toCString(inspectorURL)
-
-	called := false
-	if c.dll.mbSetDebugConfig.Find() == nil {
-		c.dll.mbSetDebugConfig.Call(
-			uintptr(view),
-			uintptr(unsafe.Pointer(&key[0])),
-			uintptr(unsafe.Pointer(&param[0])),
-		)
-		called = true
-	}
-
-	if c.dll.wkeSetDebugConfig.Find() == nil {
-		c.dll.wkeSetDebugConfig.Call(
-			uintptr(view),
-			uintptr(unsafe.Pointer(&key[0])),
-			uintptr(unsafe.Pointer(&param[0])),
-		)
-		called = true
-	}
-
-	if !called {
-		return fmt.Errorf("debug api not found: mbSetDebugConfig/wkeSetDebugConfig")
-	}
-
 	return nil
 }
 

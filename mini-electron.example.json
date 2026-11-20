@@ -1,0 +1,37 @@
+{
+  "_comment": "Copy to mini-electron.json and edit. Place next to the exe (or in the working dir), or point MINI_ELECTRON_CONFIG at it. Unknown keys are ignored.",
+
+  "name": "Mini Electron Demo",
+  "outputFilename": "mini_electron",
+  "window": {
+    "title": "Mini Electron Demo",
+    "width": 900,
+    "height": 640,
+    "maximized": false
+  },
+  "icon": "build/icon.ico",
+  "dataDir": "mini-electron-demo",
+  "cookieDir": "",
+  "userAgent": "",
+  "devUrl": "http://localhost:5173",
+  "debug": false,
+  "allowIframes": false,
+  "dll": "",
+
+  "sign": {
+    "_comment": "exe code signing, mirrors electron-builder. enabled (or CSC_LINK env) triggers signing; WIN_CSC_LINK/WIN_CSC_KEY_PASSWORD/CSC_LINK/CSC_KEY_PASSWORD also work. Default dual-signs sha1+sha256.",
+    "enabled": false,
+    "certificateFile": "",
+    "certificatePassword": "",
+    "certificateSubjectName": "",
+    "certificateSha1": "",
+    "additionalCertificateFile": "",
+    "signingHashAlgorithms": ["sha1", "sha256"],
+    "timeStampServer": "http://timestamp.digicert.com",
+    "rfc3161TimeStampServer": "http://timestamp.digicert.com",
+    "description": "",
+    "website": "",
+    "signtoolPath": "",
+    "forceCodeSigning": false
+  }
+}

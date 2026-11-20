@@ -21,3 +21,8 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+mb132_x64.dll
+
+*.syso
+runtime

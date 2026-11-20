@@ -5,7 +5,7 @@ package mbvip
 import "unsafe"
 
 func (c *Client) GetURL(view WebView) (string, error) {
-	if err := requireProc(c.dll.mbGetURL, "mbGetURL"); err != nil {
+	if err := requireProc(c.dll.mbGetURL, "mbGetUrl"); err != nil {
 		return "", err
 	}
 	p, _, _ := c.dll.mbGetURL.Call(uintptr(view))
@@ -41,7 +41,7 @@ func (c *Client) IsMainFrame(view WebView, frameID WebFrameHandle) (bool, error)
 		return false, err
 	}
 	r, _, _ := c.dll.mbIsMainFrame.Call(uintptr(view), uintptr(frameID))
-	return r != 0, nil
+	return byte(r) != 0, nil
 }
 
 func (c *Client) EditorSelectAll(view WebView) error {

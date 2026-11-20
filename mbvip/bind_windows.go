@@ -3,6 +3,7 @@
 package mbvip
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -13,6 +14,7 @@ type binderRequest struct {
 	ID     int64             `json:"id"`
 	Method string            `json:"method"`
 	Args   []json.RawMessage `json:"args"`
+	Token  string            `json:"token"`
 }
 
 type binderResponse struct {
@@ -22,10 +24,11 @@ type binderResponse struct {
 }
 
 type Binder struct {
-	client  *Client
-	view    WebView
-	mu      sync.RWMutex
-	targets map[string]reflect.Value
+	client    *Client
+	view      WebView
+	mu        sync.RWMutex
+	targets   map[string]reflect.Value
+	authorize func(JsQuery, string) bool
 }
 
 func NewBinder(c *Client, view WebView) *Binder {
@@ -36,24 +39,39 @@ func NewBinder(c *Client, view WebView) *Binder {
 	}
 }
 
-func (b *Binder) Bind(prefix string, target any) error {
+func bindingMethods(target any) ([]reflect.Method, error) {
 	v := reflect.ValueOf(target)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("mbvip: Bind target must be a pointer to struct")
+		return nil, fmt.Errorf("mbvip: Bind target must be a non-nil pointer to struct")
 	}
 	t := v.Type()
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	var methods []reflect.Method
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
-		if m.PkgPath != "" {
+		if m.PkgPath != "" || m.Name == "SetApp" {
 			continue
 		}
+		if m.Type.IsVariadic() {
+			return nil, fmt.Errorf("mbvip: variadic method %s is unsupported", m.Name)
+		}
+		methods = append(methods, m)
+	}
+	return methods, nil
+}
+
+func (b *Binder) Bind(prefix string, target any) error {
+	methods, err := bindingMethods(target)
+	if err != nil {
+		return err
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, m := range methods {
 		key := m.Name
 		if prefix != "" {
 			key = prefix + "." + m.Name
 		}
-		b.targets[key] = v.Method(i)
+		b.targets[key] = reflect.ValueOf(target).Method(m.Index)
 	}
 	return nil
 }
@@ -86,6 +104,11 @@ func (b *Binder) handleQuery(q JsQuery) {
 		return
 	}
 	res.ID = req.ID
+	if b.authorize != nil && !b.authorize(q, req.Token) {
+		res.Error = "bridge unavailable for this document"
+		b.respond(q, res)
+		return
+	}
 
 	b.mu.RLock()
 	method, ok := b.targets[req.Method]
@@ -103,6 +126,10 @@ func (b *Binder) handleQuery(q JsQuery) {
 		res.Result = result
 	}
 	b.respond(q, res)
+}
+
+func tokenMatches(expected, actual string) bool {
+	return expected != "" && subtle.ConstantTimeCompare([]byte(expected), []byte(actual)) == 1
 }
 
 func (b *Binder) respond(q JsQuery, res binderResponse) {

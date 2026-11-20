@@ -2,6 +2,8 @@ package main
 
 import (
 	"embed"
+	"log"
+	"os"
 	"time"
 
 	"mini_electron/mbvip"
@@ -9,6 +11,9 @@ import (
 
 //go:embed all:frontend/dist
 var frontend embed.FS
+
+//go:embed runtime/mb132_x64.dll
+var mbDLL []byte
 
 // Backend is exposed to JS as window bridge "App.*".
 type Backend struct {
@@ -32,9 +37,12 @@ func (b *Backend) Now() string { return time.Now().Format("2006-01-02 15:04:05")
 
 func (b *Backend) OpenWindow() { _, _ = b.app.OpenWindow("") }
 
-func (b *Backend) StartTicker() {
+func (b *Backend) StartTicker() bool {
+	if os.Getenv("MINI_ELECTRON_SMOKE") == "1" {
+		return true
+	}
 	if b.stop != nil {
-		return
+		return false
 	}
 	ch := make(chan struct{})
 	b.stop = ch
@@ -53,6 +61,13 @@ func (b *Backend) StartTicker() {
 			}
 		}
 	}()
+	return false
+}
+
+func (b *Backend) SmokePassed() {
+	if os.Getenv("MINI_ELECTRON_SMOKE") == "1" {
+		log.Print("smoke: generated RPC success and rejection verified")
+	}
 }
 
 func (b *Backend) StopTicker() {
@@ -66,6 +81,7 @@ func main() {
 	mbvip.Run(mbvip.Options{
 		Assets:     frontend,
 		AssetsRoot: "frontend/dist",
+		DLLData:    mbDLL,
 		Bind:       []mbvip.Binding{{Name: "App", Target: &Backend{}}},
 	})
 }

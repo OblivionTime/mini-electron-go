@@ -2,16 +2,21 @@
 // JS -> Go: invoke("Struct.Method", ...args) => Promise
 // Go -> JS: on("event", handler)
 let seq = 0
+const ready = new Promise((resolve) => {
+  if (window.__mbToken) resolve(window.__mbToken)
+  else window.addEventListener('mb-ready', () => resolve(window.__mbToken), { once: true })
+})
 
-export function invoke(method, ...args) {
+export async function invoke(method, ...args) {
+  if (typeof window.mbQuery !== 'function') {
+    throw new Error('window.mbQuery not found (not running inside MiniBlink?)')
+  }
+  const token = await Promise.race([ready, new Promise((resolve) => setTimeout(resolve, 5000))])
+  if (!token) throw new Error('bridge unavailable for this document')
   return new Promise((resolve, reject) => {
-    if (typeof window.mbQuery !== 'function') {
-      reject(new Error('window.mbQuery not found (not running inside MiniBlink?)'))
-      return
-    }
     const id = ++seq
     let settled = false
-    window.mbQuery(id, JSON.stringify({ id, method, args }), (_customMsg, response) => {
+    window.mbQuery(id, JSON.stringify({ id, method, args, token }), (_customMsg, response) => {
       if (settled) return
       settled = true
       let res
@@ -26,6 +31,9 @@ export function invoke(method, ...args) {
     })
   })
 }
+
+// Global entry point used by the auto-generated binding wrappers.
+window.__mbInvoke = invoke
 
 const listeners = new Map()
 

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { invoke, on } from './bridge.js'
+import { App } from './bindings/index.js'
 
 const name = ref('MiniBlink')
 const greeting = ref('')
@@ -23,7 +24,7 @@ function callGreet() {
   run(async () => {
     busy.value = true
     try {
-      greeting.value = await invoke('App.Greet', name.value)
+      greeting.value = await App.Greet(name.value)
     } finally {
       busy.value = false
     }
@@ -51,7 +52,18 @@ onMounted(() => {
     ticks.value.unshift(data)
     if (ticks.value.length > 8) ticks.value.pop()
   })
-  run(() => invoke('App.StartTicker'))
+  run(async () => {
+    if (!await App.StartTicker()) return
+    if (await App.Greet('smoke') !== 'Hello, smoke from Go!') throw new Error('unexpected greeting')
+    let rejected = false
+    try {
+      await App.Greet(42)
+    } catch (err) {
+      rejected = err.message.startsWith('arg 0:')
+    }
+    if (!rejected) throw new Error('invalid argument was not rejected')
+    await App.SmokePassed()
+  })
 })
 </script>
 

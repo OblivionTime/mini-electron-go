@@ -6,9 +6,26 @@
     "width": 900,
     "height": 640
   },
-  "icon": "build/icon.ico",
+  "icon": "build/logo.ico",
   "dataDir": "mini-electron-demo",
   "cookieDir": "",
   "userAgent": "",
-  "devUrl": "http://localhost:5173"
+  "devUrl": "http://localhost:5173",
+  "allowIframes": false,
+  "dll": "",
+  "sign": {
+    "enabled": false,
+    "certificateFile": "",
+    "certificatePassword": "",
+    "certificateSubjectName": "",
+    "certificateSha1": "",
+    "additionalCertificateFile": "",
+    "signingHashAlgorithms": ["sha1", "sha256"],
+    "timeStampServer": "http://timestamp.digicert.com",
+    "rfc3161TimeStampServer": "http://timestamp.digicert.com",
+    "description": "",
+    "website": "",
+    "signtoolPath": "",
+    "forceCodeSigning": false
+  }
 }

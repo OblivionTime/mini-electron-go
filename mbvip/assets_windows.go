@@ -9,12 +9,22 @@ import (
 	"strings"
 )
 
+const assetCSP = "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-src "
+
 // Assets serves an embedded frontend (e.g. a Vite build) over a virtual host,
 // so the app ships as a single binary with no local HTTP server — like Wails.
 type Assets struct {
-	client *Client
-	fsys   fs.FS
-	host   string
+	client       *Client
+	fsys         fs.FS
+	host         string
+	allowIframes bool
+}
+
+func (a *Assets) csp() string {
+	if a.allowIframes {
+		return assetCSP + "http: https:"
+	}
+	return assetCSP + "'none'"
 }
 
 func NewAssets(c *Client, fsys fs.FS, host string) *Assets {
@@ -43,15 +53,27 @@ func (a *Assets) Index() (string, error) {
 // Handler intercepts network requests via mbOnLoadUrlBegin and answers them
 // from the embedded FS. Register it before LoadURL.
 func (a *Assets) Handler() LoadURLBeginHandler {
+	cancel := a.client.dll.dll.NewProc("mbNetCancelRequest")
 	return func(_ WebView, url string, job uintptr) bool {
+		u, err := neturl.Parse(url)
+		if err != nil || origin(url) != origin(a.BaseURL()) {
+			if err == nil && strings.EqualFold(u.Hostname(), a.host) && cancel.Find() == nil {
+				cancel.Call(job)
+				return true
+			}
+			return false
+		}
 		name, ok := a.resolve(url)
-		if !ok {
-			return false
-		}
 		data, err := fs.ReadFile(a.fsys, name)
-		if err != nil {
-			return false
+		if !ok || err != nil {
+			if cancel.Find() == nil {
+				cancel.Call(job)
+			} else {
+				_ = a.client.NetSetData(job, []byte("not found"))
+			}
+			return true
 		}
+		_ = a.client.NetSetHTTPHeaderField(job, "Content-Security-Policy", a.csp(), true)
 		mime := mimeFor(name)
 		_ = a.client.NetSetHTTPHeaderField(job, "Content-Type", mime, true)
 		_ = a.client.NetSetMIMEType(job, mime)
@@ -62,7 +84,7 @@ func (a *Assets) Handler() LoadURLBeginHandler {
 
 func (a *Assets) resolve(rawURL string) (string, bool) {
 	u, err := neturl.Parse(rawURL)
-	if err != nil || u.Host != a.host {
+	if err != nil || origin(rawURL) != origin(a.BaseURL()) {
 		return "", false
 	}
 	name := strings.TrimPrefix(u.Path, "/")
